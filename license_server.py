@@ -115,8 +115,10 @@ def block_key():
     conn.close()
     return jsonify({"status": "ok", "message": f"Key {key} blocked"})
 
+# Инициализируем БД при старте модуля (чтобы работало с Gunicorn)
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     # Получаем порт из переменной окружения (требование Render)
     # По умолчанию 8000 для локального запуска
     port = int(os.environ.get("PORT", 8000))
