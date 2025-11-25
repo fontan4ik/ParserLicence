@@ -120,6 +120,44 @@ def list_licenses():
     conn.close()
     return jsonify(licenses)
 
+@app.route('/admin/create_key', methods=['POST'])
+def create_key():
+    """Создание нового ключа"""
+    import random
+    import string
+    
+    data = request.json or {}
+    
+    # Генерируем ключ если не передан
+    if 'key' not in data:
+        parts = []
+        for _ in range(3):
+            part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+            parts.append(part)
+        key = '-'.join(parts)
+    else:
+        key = data['key']
+    
+    max_machines = data.get('max_machines', 1)
+    status = data.get('status', 'active')
+    
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("INSERT INTO licenses (key, status, max_machines) VALUES (?, ?, ?)", 
+                  (key, status, max_machines))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "status": "ok", 
+            "key": key,
+            "max_machines": max_machines,
+            "message": f"Key {key} created"
+        })
+    except sqlite3.IntegrityError:
+        return jsonify({"status": "error", "message": "Key already exists"}), 400
+
 @app.route('/admin/block_key', methods=['POST'])
 def block_key():
     """Блокировка ключа (Kill-switch)"""
@@ -130,6 +168,17 @@ def block_key():
     conn.commit()
     conn.close()
     return jsonify({"status": "ok", "message": f"Key {key} blocked"})
+
+@app.route('/admin/activate_key', methods=['POST'])
+def activate_key():
+    """Активация ключа"""
+    key = request.json.get('key')
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("UPDATE licenses SET status='active' WHERE key=?", (key,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok", "message": f"Key {key} activated"})
 
 if __name__ == '__main__':
     # Получаем порт из переменной окружения (требование Render)
