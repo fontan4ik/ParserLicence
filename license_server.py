@@ -4,38 +4,47 @@ import datetime
 import os
 
 app = Flask(__name__)
-DB_NAME = "licenses.db"
+
+# Используем абсолютный путь к БД
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, "licenses.db")
 
 def init_db():
     """Инициализация базы данных"""
     # Note: On Render free tier, the filesystem is ephemeral. 
     # The database will be reset on every deploy/restart.
     # For production, use a persistent disk or an external database (PostgreSQL).
-    if not os.path.exists(DB_NAME):
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        # Таблица лицензий
-        c.execute('''CREATE TABLE IF NOT EXISTS licenses
-                     (key TEXT PRIMARY KEY, 
-                      status TEXT DEFAULT 'active', 
-                      expiration_date TEXT,
-                      max_machines INTEGER DEFAULT 1)''')
-        
-        # Таблица активаций (связка ключ-машина)
-        c.execute('''CREATE TABLE IF NOT EXISTS activations
-                     (machine_id TEXT, 
-                      license_key TEXT, 
-                      last_check TEXT,
-                      ip_address TEXT,
-                      PRIMARY KEY (machine_id, license_key))''')
-        
-        # Добавляем тестовый ключ
-        c.execute("INSERT OR IGNORE INTO licenses (key, status, max_machines) VALUES (?, ?, ?)", 
-                  ("TEST-KEY-12345", "active", 5))
-        
-        conn.commit()
-        conn.close()
-        print("База данных инициализирована")
+    
+    print(f"Инициализация БД: {DB_NAME}")
+    
+    # Создаем директорию если нужно
+    os.makedirs(os.path.dirname(DB_NAME), exist_ok=True)
+    
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # Таблица лицензий
+    c.execute('''CREATE TABLE IF NOT EXISTS licenses
+                 (key TEXT PRIMARY KEY, 
+                  status TEXT DEFAULT 'active', 
+                  expiration_date TEXT,
+                  max_machines INTEGER DEFAULT 1)''')
+    
+    # Таблица активаций (связка ключ-машина)
+    c.execute('''CREATE TABLE IF NOT EXISTS activations
+                 (machine_id TEXT, 
+                  license_key TEXT, 
+                  last_check TEXT,
+                  ip_address TEXT,
+                  PRIMARY KEY (machine_id, license_key))''')
+    
+    # Добавляем тестовый ключ
+    c.execute("INSERT OR IGNORE INTO licenses (key, status, max_machines) VALUES (?, ?, ?)", 
+              ("TEST-KEY-12345", "active", 5))
+    
+    conn.commit()
+    conn.close()
+    print(f"База данных инициализирована в {DB_NAME}")
 
 @app.route('/')
 def index():
