@@ -8,6 +8,9 @@ DB_NAME = "licenses.db"
 
 def init_db():
     """Инициализация базы данных"""
+    # Note: On Render free tier, the filesystem is ephemeral. 
+    # The database will be reset on every deploy/restart.
+    # For production, use a persistent disk or an external database (PostgreSQL).
     if not os.path.exists(DB_NAME):
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
@@ -33,6 +36,10 @@ def init_db():
         conn.commit()
         conn.close()
         print("База данных инициализирована")
+
+@app.route('/')
+def index():
+    return "License Server is Running"
 
 @app.route('/api/check_license', methods=['POST'])
 def check_license():
@@ -88,7 +95,7 @@ def check_license():
 
 @app.route('/admin/licenses', methods=['GET'])
 def list_licenses():
-    """Админский метод для просмотра лицензий (в реальном проекте нужна авторизация!)"""
+    """Админский метод для просмотра лицензий"""
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
@@ -110,5 +117,9 @@ def block_key():
 
 if __name__ == '__main__':
     init_db()
-    print("Сервер лицензий запущен на порту 8000")
-    app.run(port=8000, debug=True)
+    # Получаем порт из переменной окружения (требование Render)
+    # По умолчанию 8000 для локального запуска
+    port = int(os.environ.get("PORT", 8000))
+    print(f"Сервер лицензий запущен на порту {port}")
+    # Слушаем 0.0.0.0 (требование Render)
+    app.run(host='0.0.0.0', port=port)
