@@ -50,6 +50,13 @@ def init_db():
 def index():
     return "License Server is Running"
 
+@app.before_request
+def before_first_request():
+    """Инициализация БД перед первым запросом"""
+    if not hasattr(app, 'db_initialized'):
+        init_db()
+        app.db_initialized = True
+
 @app.route('/api/check_license', methods=['POST'])
 def check_license():
     data = request.json
@@ -123,9 +130,6 @@ def block_key():
     conn.commit()
     conn.close()
     return jsonify({"status": "ok", "message": f"Key {key} blocked"})
-
-# Инициализируем БД при старте модуля (чтобы работало с Gunicorn)
-init_db()
 
 if __name__ == '__main__':
     # Получаем порт из переменной окружения (требование Render)
